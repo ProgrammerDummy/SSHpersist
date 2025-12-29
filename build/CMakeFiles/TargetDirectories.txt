@@ -1,0 +1,3 @@
+/Users/matthew.jeong.24/Desktop/github_repos/SSHpersist/build/CMakeFiles/sshpersist.dir
+/Users/matthew.jeong.24/Desktop/github_repos/SSHpersist/build/CMakeFiles/edit_cache.dir
+/Users/matthew.jeong.24/Desktop/github_repos/SSHpersist/build/CMakeFiles/rebuild_cache.dir

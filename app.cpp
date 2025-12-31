@@ -2,6 +2,18 @@
 
 int main() {
 
+    mySession testsession(22, "127.0.0.1", "Matches");
+
+    if(testsession.connect_and_auth() == 1) {
+        std::cout << "successfully connected";
+    }
+
+
+
+}
+
+void stuff(void) {
+
     unsigned int port = 22;
     const char* host = "127.0.0.1";
     std::string password = "Matches";
@@ -77,6 +89,5 @@ int main() {
         connection_status = testsession.userauthPassword(password.c_str()); //reconnect
         std::cout << "reconnected";
     }
-
 
 }

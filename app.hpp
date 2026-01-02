@@ -13,7 +13,6 @@ class mySession {
         std::string host;
         std::string username;
         std::string password;
-        int connection_status;
         int authentication_type_flag; // this should be 0 if keys 1 if password
         int username_flag;
         int reconnect_flag;
@@ -48,6 +47,8 @@ class mySession {
             session_ptr->setOption(SSH_OPTIONS_HOST, (const char*)host.c_str());
             session_ptr->setOption(SSH_OPTIONS_PORT, &port);
 
+            int auth_status;
+
             if(username_flag == 1) {
                 session_ptr->setOption(SSH_OPTIONS_USER, (const char*)username.c_str());
             }
@@ -66,16 +67,16 @@ class mySession {
             }
 
             if(authentication_type_flag != 1) {
-                connection_status = session_ptr->userauthNone();
+                auth_status = session_ptr->userauthNone();
             }
 
-            while(connection_status != SSH_AUTH_SUCCESS) {
+            while(auth_status != SSH_AUTH_SUCCESS) {
 
                 std::cout << "Enter password: ";
 
                 std::getline(std::cin, password);
 
-                connection_status = session_ptr->userauthPassword(password.c_str());
+                auth_status = session_ptr->userauthPassword(password.c_str());
 
                 authentication_type_flag = 1;
 
@@ -84,11 +85,14 @@ class mySession {
             return 1;
 
 
-            reconnectpoint: //if this is for reconnection, then we should already have the password value which was taken for initial authentication'
-                if(authentication_type_flag == 1) {
-                    while(connection_status != SSH_AUTH_SUCCESS) {
+            reconnectpoint: //if this is for reconnection, then we should already have the password value which was stored for initial authentication
 
-                        connection_status = session_ptr->userauthPassword(password.c_str());
+                //all we have to do is just check what kind of authentication was used
+
+                if(authentication_type_flag == 1) {
+                    while(auth_status != SSH_AUTH_SUCCESS) {
+
+                        auth_status = session_ptr->userauthPassword(password.c_str());
 
                     }
                 }
@@ -97,7 +101,7 @@ class mySession {
 
         }
 
-        int connectionStatus() {
+        int connection_status_check() {
             ssh_session unwrapped_session = session_ptr->getCSession();
 
             return ssh_is_connected(unwrapped_session); //0 if disconnected, 1 if connected
@@ -114,6 +118,10 @@ class mySession {
 
             //use pointers 
 
+            if(connection_status_check() == 1) {
+                return 1;
+            }
+
             std::unique_ptr<ssh::Session> dummy_ptr = std::make_unique<ssh::Session>();
 
             std::swap(dummy_ptr, session_ptr);
@@ -125,6 +133,11 @@ class mySession {
         }
 
         int disconnect() {
+
+            if(connection_status_check() == 0) {
+                return 1;
+            }
+
             session_ptr->disconnect();
 
             return 1;

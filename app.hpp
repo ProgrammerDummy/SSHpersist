@@ -6,37 +6,56 @@
 
 class mySession {
     private:
-
-        ssh::Session my_ssh_session; //can this be copied/assigned/moved?
+        std::unique_ptr<ssh::Session> session_ptr;
 
     public:
         int port;
-        char* host;
-        char* username;
+        std::string host;
+        std::string username;
         std::string password;
         int connection_status;
         int authentication_type_flag; // this should be 0 if keys 1 if password
+        int username_flag;
         
-        mySession(int p, char* h, std::string pw) {
+        mySession(int p, std::string h, std::string un, std::string pw) {
+            port = p;
+            host = h;
+            username = un;
+            password = pw;
+            username_flag = 1;
+            session_ptr = std::make_unique<ssh::Session>();
+        }
+
+        mySession(int p, std::string h, std::string pw) {
             port = p;
             host = h;
             password = pw;
+            username_flag = 0;
+            session_ptr = std::make_unique<ssh::Session>();
+        }
+
+        ~mySession() {
+
         }
 
         int connect_and_auth() {
-            my_ssh_session.setOption(SSH_OPTIONS_HOST, host);
-            my_ssh_session.setOption(SSH_OPTIONS_PORT, &port);
-            my_ssh_session.setOption(SSH_OPTIONS_USER, username);
+
+            session_ptr->setOption(SSH_OPTIONS_HOST, (const char*)host.c_str());
+            session_ptr->setOption(SSH_OPTIONS_PORT, &port);
+
+            if(username_flag == 1) {
+                session_ptr->setOption(SSH_OPTIONS_USER, (const char*)username.c_str());
+            }
 
             try {
-            my_ssh_session.connect();
+            session_ptr->connect();
             }
             catch(ssh::SshException &exception) {
                 std::cerr << exception.getError() << "\n";
                 return 0;
             }
 
-            connection_status = my_ssh_session.userauthNone();
+            connection_status = session_ptr->userauthNone();
 
             while(connection_status != SSH_AUTH_SUCCESS) {
 
@@ -44,7 +63,7 @@ class mySession {
         
                 std::getline(std::cin, password);
 
-                connection_status = my_ssh_session.userauthPassword(password.c_str());
+                connection_status = session_ptr->userauthPassword(password.c_str());
 
                 authentication_type_flag = 1;
 
@@ -55,7 +74,7 @@ class mySession {
         }
 
         int connectionStatus() {
-            ssh_session unwrapped_session = my_ssh_session.getCSession();
+            ssh_session unwrapped_session = session_ptr->getCSession();
 
             return ssh_is_connected(unwrapped_session); //0 if disconnected, 1 if connected
         }
@@ -71,45 +90,13 @@ class mySession {
 
             //use pointers 
 
-
-            ssh::Session dummy_ssh_session;
-
-
-
-
-
-
-
-            my_ssh_session.setOption(SSH_OPTIONS_HOST, host);
-            my_ssh_session.setOption(SSH_OPTIONS_PORT, &port);
-            my_ssh_session.setOption(SSH_OPTIONS_USER, username);
-
-            try {
-            my_ssh_session.connect();
-            }
-            catch(ssh::SshException &exception) {
-                std::cerr << exception.getError() << "\n";
-                return 0;
-            }
-
-            connection_status = my_ssh_session.userauthNone();
-
-            while(connection_status != SSH_AUTH_SUCCESS) {
-
-                connection_status = my_ssh_session.userauthPassword(password.c_str());
-
-                authentication_type_flag = 1;
-
-            }
-
             return 1;
-
 
 
         }
 
         int disconnect() {
-            my_ssh_session.disconnect();
+            session_ptr->disconnect();
 
             return 1;
         }

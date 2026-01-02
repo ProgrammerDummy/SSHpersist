@@ -16,6 +16,9 @@ class mySession {
         int connection_status;
         int authentication_type_flag; // this should be 0 if keys 1 if password
         int username_flag;
+        int reconnect_flag;
+
+        //maybe i can use bitwise operations to make a control integer that stores connection status and all flags?
         
         mySession(int p, std::string h, std::string un, std::string pw) {
             port = p;
@@ -24,6 +27,7 @@ class mySession {
             password = pw;
             username_flag = 1;
             session_ptr = std::make_unique<ssh::Session>();
+            reconnect_flag = 0;
         }
 
         mySession(int p, std::string h, std::string pw) {
@@ -32,6 +36,7 @@ class mySession {
             password = pw;
             username_flag = 0;
             session_ptr = std::make_unique<ssh::Session>();
+            reconnect_flag = 0;
         }
 
         ~mySession() {
@@ -55,12 +60,19 @@ class mySession {
                 return 0;
             }
 
-            connection_status = session_ptr->userauthNone();
+            if(reconnect_flag == 1) {
+
+                goto reconnectpoint;
+            }
+
+            if(authentication_type_flag != 1) {
+                connection_status = session_ptr->userauthNone();
+            }
 
             while(connection_status != SSH_AUTH_SUCCESS) {
 
                 std::cout << "Enter password: ";
-        
+
                 std::getline(std::cin, password);
 
                 connection_status = session_ptr->userauthPassword(password.c_str());
@@ -70,6 +82,18 @@ class mySession {
             }
 
             return 1;
+
+
+            reconnectpoint: //if this is for reconnection, then we should already have the password value which was taken for initial authentication'
+                if(authentication_type_flag == 1) {
+                    while(connection_status != SSH_AUTH_SUCCESS) {
+
+                        connection_status = session_ptr->userauthPassword(password.c_str());
+
+                    }
+                }
+
+                return 1;
 
         }
 
@@ -90,8 +114,13 @@ class mySession {
 
             //use pointers 
 
-            return 1;
+            std::unique_ptr<ssh::Session> dummy_ptr = std::make_unique<ssh::Session>();
 
+            std::swap(dummy_ptr, session_ptr);
+
+            reconnect_flag = 1;
+
+            return connect_and_auth();
 
         }
 

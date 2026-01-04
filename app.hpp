@@ -7,6 +7,7 @@
 class mySession {
     private:
         std::unique_ptr<ssh::Session> session_ptr;
+        std::unique_ptr<ssh::Channel> channel_ptr;
 
     public:
         int port;
@@ -122,6 +123,8 @@ class mySession {
                 return 1;
             }
 
+            reset_channel(); 
+
             std::unique_ptr<ssh::Session> dummy_ptr = std::make_unique<ssh::Session>();
 
             std::swap(dummy_ptr, session_ptr);
@@ -143,4 +146,40 @@ class mySession {
             return 1;
         }
 
+        
+        void open_channel_and_shell() {
+
+            char buf[4096];
+
+            channel_ptr = std::make_unique<ssh::Channel>(*session_ptr);
+
+            channel_ptr->openSession();
+
+            channel_ptr->requestPty();
+
+            channel_ptr->changePtySize(5, 5);
+
+            channel_ptr->requestShell();
+            
+            while(channel_ptr->isOpen()) {
+                int bytes_read = channel_ptr->read(buf, sizeof(buf), false, 100);
+
+                if(bytes_read < 0) {
+                    return;
+                }
+
+                std::cout << buf << std::endl;
+            }
+        }
+
+        void close_channel() {
+
+            if(channel_ptr->isClosed() == false) {
+                channel_ptr->close();
+            }
+        }
+            
+        void reset_channel() {
+
+        }
 };

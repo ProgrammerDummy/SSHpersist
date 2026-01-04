@@ -8,9 +8,8 @@ int main() {
         std::cout << "successfully connected\n";
     }
 
-    std::cout << testsession.disconnect() << "\n";
+    testsession.open_channel_and_shell();
 
-    std::cout << testsession.reconnect() << std::endl;
 
 
 
@@ -18,5 +17,8 @@ int main() {
 
 
 void oldcode() {
-    
+
+    //std::cout << testsession.disconnect() << "\n";
+
+    //std::cout << testsession.reconnect() << std::endl;
 }

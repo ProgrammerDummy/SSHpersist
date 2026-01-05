@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <memory>
+#include <vector>
 #include <libssh/libsshpp.hpp>
 
 
@@ -149,27 +150,40 @@ class mySession {
         
         void open_channel_and_shell() {
 
-            char buf[4096];
-
             channel_ptr = std::make_unique<ssh::Channel>(*session_ptr);
 
             channel_ptr->openSession();
 
             channel_ptr->requestPty();
 
-            channel_ptr->changePtySize(5, 5);
+            channel_ptr->changePtySize(10, 10);
 
             channel_ptr->requestShell();
+
+            int bytes_read;
+            int bytes_written;
+            int user_bytes_read;
+            std::vector<char> inbuf(4096);
+            std::string outbuf;
             
-            while(channel_ptr->isOpen()) {
-                int bytes_read = channel_ptr->read(buf, sizeof(buf), false, 100);
+            while(channel_ptr->isOpen() && !channel_ptr->isEof()) {
+                bytes_read = channel_ptr->read(inbuf.data(), inbuf.size(), false, -1); //was ambiguous function call
 
                 if(bytes_read < 0) {
                     return;
                 }
 
-                std::cout << buf << std::endl;
+                if(bytes_read > 0) {
+                    std::cout.write(inbuf.data(), bytes_read);
+                    std::cout.flush();
+                }
+
+                std::getline(std::cin, outbuf);
+
+                channel_ptr->write(outbuf.data(), outbuf.size());
+                channel_ptr->write("\n", 1);
             }
+
         }
 
         void close_channel() {

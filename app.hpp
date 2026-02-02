@@ -29,6 +29,7 @@ class mySession {
             username_flag = 1;
             session_ptr = std::make_unique<ssh::Session>();
             reconnect_flag = 0;
+            channel_ptr = nullptr;
         }
 
         mySession(int p, std::string h, std::string pw) {
@@ -38,6 +39,7 @@ class mySession {
             username_flag = 0;
             session_ptr = std::make_unique<ssh::Session>();
             reconnect_flag = 0;
+            channel_ptr = nullptr;
         }
 
         ~mySession() {
@@ -152,6 +154,8 @@ class mySession {
 
             channel_ptr = std::make_unique<ssh::Channel>(*session_ptr);
 
+            ssh_channel raw_channel = channel_ptr->getCChannel();
+
             channel_ptr->openSession();
 
             channel_ptr->requestPty();
@@ -165,24 +169,32 @@ class mySession {
             int user_bytes_read;
             std::vector<char> inbuf(4096);
             std::string outbuf;
-            
+            int count = 0;
+
             while(channel_ptr->isOpen() && !channel_ptr->isEof()) {
-                bytes_read = channel_ptr->read(inbuf.data(), inbuf.size(), false, -1); //was ambiguous function call
 
-                if(bytes_read < 0) {
-                    return;
-                }
-
-                if(bytes_read > 0) {
+                for(;;) {
+                    bytes_read = channel_ptr->readNonblocking(inbuf.data(), inbuf.size(), false); //was ambiguous function call but fixed it, need to find clear error
+                    if(bytes_read <= 0) {
+                        break;
+                    }
                     std::cout.write(inbuf.data(), bytes_read);
                     std::cout.flush();
                 }
 
+                
                 std::getline(std::cin, outbuf);
+                
+                outbuf += "\n";
 
                 channel_ptr->write(outbuf.data(), outbuf.size());
-                channel_ptr->write("\n", 1);
+
+                ssh_session unwrapped_session = session_ptr->getCSession();
+                
+            
             }
+
+            
 
         }
 
@@ -197,3 +209,13 @@ class mySession {
 
         }
 };
+
+
+/*
+
+new idea: 
+
+- one input control thread to handle all user inputs/commands --> will route commands to master thread via a queue
+- one control/master thread to handle all sessions and channels --> will check queue then reroute command to correct session, and will write to pseudoterminal
+
+*/
